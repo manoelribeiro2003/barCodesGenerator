@@ -4,7 +4,7 @@
   "main": "gerador.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node gerar.js"
+    "start": "node --no-warnings gerar.js"
   },
   "keywords": [],
   "author": "",
@@ -14,6 +14,7 @@
     "canvas": "^3.2.0",
     "exceljs": "^4.4.0",
     "jsbarcode": "^3.12.1",
+    "ora": "^9.3.0",
     "pdf-lib": "^1.17.1",
     "xlsx": "^0.18.5"
   }

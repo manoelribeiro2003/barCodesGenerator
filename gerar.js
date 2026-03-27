@@ -4,9 +4,22 @@ import fs from "fs";
 import ExcelJS from "exceljs";
 import * as xlsx from "xlsx";
 import { PDFDocument, rgb } from "pdf-lib";
+import readline from "readline";
+import ora from "ora";
+
+// Cria interface de leitura no terminal
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+// Função para perguntar algo no terminal
+function perguntar(pergunta) {
+  return new Promise(resolve => rl.question(pergunta, resolve));
+}
 
 // Ler o arquivo Excel existente
-const pastaExcel = fs.readFileSync("./Pasta5.xlsx");
+const pastaExcel = fs.readFileSync("./planilhas/BasePatrimonios.xlsx");
 const workbookXlsx = xlsx.read(pastaExcel, { type: "buffer" });
 const sheetName = workbookXlsx.SheetNames[0];
 const sheet = workbookXlsx.Sheets[sheetName];
@@ -23,14 +36,28 @@ const bens = data
 
 console.log(`Existem ${bens.length} códigos já na planilha.`);
 
+// Pergunta quantos códigos gerar
+const quantidadeInput = await perguntar("Quantos códigos deseja gerar? ");
+const quantidade = parseInt(quantidadeInput);
+
+// Pergunta se quer salvar na base
+const salvarResposta = await perguntar("Deseja salvar na Base de Patrimonios? (s/n) ");
+const salvarNoMesmoArquivo = salvarResposta.toLowerCase() === "s";
+
+// Fecha o readline
+rl.close();
+
+const spinnerCod = ora("Gerando códigos...").start();
+
 // Gerar 10 códigos de 6 dígitos únicos
 const set = new Set();
-while (set.size < 1000) {
+while (set.size < quantidade) {
   const n = String(Math.floor(Math.random() * 900000) + 100000);
   if (!bens.includes(n)) set.add(n);
 }
 const codigos = [...set];
-console.log(`Gerados ${codigos.length} códigos.`);
+
+spinnerCod.succeed("Códigos gerados!");
 
 // Carregar workbook com ExcelJS
 const workbook = new ExcelJS.Workbook();
@@ -106,12 +133,22 @@ for (const codigo of codigos) {
 }
 
 // Salvar Excel atualizado
-await workbook.xlsx.writeFile("./Pasta5_com_codigos.xlsx");
-console.log("Excel salvo!");
+if (salvarNoMesmoArquivo) {
+  const spinnerPlanilhas = ora("Salvando planilhas...").start();
+  await workbook.xlsx.writeFile("./planilhas/BasePatrimonios.xlsx");
+  await workbook.xlsx.writeFile("./planilhas/CodigosGerados.xlsx");
+  spinnerPlanilhas.succeed("Codigos gerados e salvos na base!");
+} else {
+  const spinnerPlanilhas = ora("Salvando planilha de codigos...").start();
+  await workbook.xlsx.writeFile("./planilhas/CodigosGerados.xlsx");
+  spinnerPlanilhas.succeed("Codigos gerados porém não salvos na base");
+}
 
 // ------------------------------------------------------------
 // 🔴 AGORA GERA O PDF EM GRADE 3xN (SEM drawText)
 // ------------------------------------------------------------
+
+const spinnerPDF = ora("Salvando PDF...").start();
 
 const pdf = await PDFDocument.create();
 let page = pdf.addPage();
@@ -155,4 +192,4 @@ for (let i = 0; i < imagens.length; i++) {
 const pdfBytes = await pdf.save();
 fs.writeFileSync("./Etiquetas.pdf", pdfBytes);
 
-console.log("📄 PDF criado com sucesso: Etiquetas.pdf (sem texto)");
+spinnerPDF.succeed("PDF criado com sucesso: Etiquetas.pdf");
